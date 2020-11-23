@@ -2,15 +2,7 @@ import psycopg2
 import json
 from psycopg2 import Error
 from service.mandrill_requests import *
-
-PSQL_HOST = "127.0.0.1"
-PSQL_PORT = "5432"
-PSQL_USER = "postgres"
-PSQL_PASS = "!AmxLOL1"
-PSQL_DB   = "InvIT"
-
-connstr = "host=%s port=%s user=%s password=%s dbname=%s" % (PSQL_HOST, PSQL_PORT, PSQL_USER, PSQL_PASS, PSQL_DB)
-#print(connstr)
+from configparser import ConfigParser
 
 def executeQuery(queryString, connection):
     cursor = connection.cursor()
@@ -89,7 +81,7 @@ def filterLoansResult(loansPagesResults, invitEmailsResults):
 
 def prepareEmailInfo(connection):
     queriFix =  'SELECT prod_page.id, sig.email, prod_page.id_product, prod_page.ciid, prod_page.id_signature, prod_page.product_name, prod_page.serial_number, prod_page.model,'
-    queriFix += 'prod_page.received_by, prod_page.email_exception, prod_page.returned, prod_page.emails_sent, sig.updated '
+    queriFix += 'prod_page.received_by, prod_page.email_exception, prod_page.returned, prod_page.emails_sent, sig.updated, sig.first_name, sig.last_name '
     queriFix += 'FROM (Select prod.id, prod.id_product, prod.ciid, prod.id_signature, prod.product_name, prod.serial_number, prod.model, '
     queriFix += 'sign.received_by, sign.email_exception, sign.returned, sign.emails_sent '
     queriFix += 'FROM(SELECT received_by, email_exception, returned, emails_sent, id_signature '
@@ -99,13 +91,14 @@ def prepareEmailInfo(connection):
     queriFix += 'LEFT JOIN tbl_signature_sheet as sig '
     queriFix += 'ON sig.id_signature = prod_page.id_signature '
 
-    print(queriFix)
-    
+    #print(queriFix)
+
     results = executeQuery(queriFix,connection)
     tempArray = []
     if results:
         for i in results:
-            tempArray.append({'id': i[0], 'email':i[1], 'id_product':i[2], 'ciid':i[3], 'id_signature':i[4],'product_name':i[5], 'serial_number': i[6], 'model':i[7],'received_by':i[8], 'email_exception':i[9], 'returned':i[10], 'emails_sent':i[11], 'updated':str(i[12])})
+            tempArray.append({'id': i[0], 'email':i[1], 'id_product':i[2], 'ciid':i[3], 'id_signature':i[4],'product_name':i[5], 'serial_number': i[6], 
+            'model':i[7],'received_by':i[8], 'email_exception':i[9], 'returned':i[10], 'emails_sent':i[11], 'updated':str(i[12]),'name':i[13], 'lastname':i[14]})
         queryJsonString = json.dumps(tempArray)
         jsonValues = json.loads(queryJsonString)
     return tempArray
@@ -128,29 +121,61 @@ def addEmailCount(results):
                         WHERE id_signature = {};""".format(currentEmailCount, idPage))
             executeInsertQuery2(query,connection)
 
-try:
-    connection = psycopg2.connect(connstr)
-    loansPagesResults  = extractLoans(connection)
-    #print(loansPagesResults)
-    connection = psycopg2.connect(connstr)
-    invitEmailsResults = extractInVITEmails(connection)
-    #print(invitEmailsResults)
-    loansPagesResultsFiltered = filterLoansResult(loansPagesResults,invitEmailsResults);
 
-    #getting the new InVITEmails values
-    connection = psycopg2.connect(connstr)
-    invitEmailsResults = extractInVITEmails(connection)
 
-    #getting userEmails and Products
-    connection = psycopg2.connect(connstr)
-    resultForEmails = prepareEmailInfo(connection)
+if __name__ == '__main__':
+    config = ConfigParser()
+    config.read('configurations.ini')
 
-    #send emails
-    results = Email.sendEmails(resultForEmails)
+    admins = []
+    name = ''
+    email = ''
+    supervisor = []
 
-    #set the Email Count
-    addEmailCount(results)
-        
-except (Exception, psycopg2.DatabaseError) as error: 
-    print ("Error", error)
+    try:
+        for section_name in config.sections():
+        #print ('Section:', section_name)
+            if str(section_name) == 'IT_ADMINISTRATORS_EMAILS':
+                for name, email  in config.items(section_name):
+                    admins.append({'name':name, 'email':email})
+                    #print ('  %s = %s' % (name, value))
+            elif (str(section_name) == 'IT_SUPERVISOR_EMAIL'):
+                for name, email  in config.items(section_name):
+                    supervisor.append({'name':name, 'email':email})
+    except:
+        print('error')
 
+
+
+    PSQL_HOST = config['dataBase']['data_base_host']
+    PSQL_PORT = config['dataBase']['data_base_port']
+    PSQL_USER = config['dataBase']['data_base_user']
+    PSQL_PASS = config['dataBase']['data_base_password']
+    PSQL_DB   = config['dataBase']['data_base_name']
+    connstr = "host=%s port=%s user=%s password=%s dbname=%s" % (PSQL_HOST, PSQL_PORT, PSQL_USER, PSQL_PASS, PSQL_DB)
+
+    try:
+        connection = psycopg2.connect(connstr)
+        loansPagesResults  = extractLoans(connection)
+        #print(loansPagesResults)
+        connection = psycopg2.connect(connstr)
+        invitEmailsResults = extractInVITEmails(connection)
+        #print(invitEmailsResults)
+        loansPagesResultsFiltered = filterLoansResult(loansPagesResults,invitEmailsResults);
+
+        #getting the new InVITEmails values
+        connection = psycopg2.connect(connstr)
+        invitEmailsResults = extractInVITEmails(connection)
+
+        #getting userEmails and Products
+        connection = psycopg2.connect(connstr)
+        resultForEmails = prepareEmailInfo(connection)
+
+        #send emails
+        results = Email.sendEmails(resultForEmails,admins,supervisor)
+
+        #set the Email Count
+        addEmailCount(results)
+            
+    except (Exception, psycopg2.DatabaseError) as error: 
+        print ("Error", error)
