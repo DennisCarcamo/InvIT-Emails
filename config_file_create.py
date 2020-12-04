@@ -20,6 +20,15 @@ config['IT_ADMINISTRATORS_EMAILS'] = {
     'Julio Zuniga':'julio.zuniga@laureate.net',
     'Oscar Nagera':'oscar.nagera@laureate.net'}
 
+config['EMAILS_FRECUENCY'] = {
+    'it_supervisor':'once a week',
+    'it_admins': 'every time'
+}
+
+config['EXECUTION'] = {
+    'execution':'automatic'
+}
+
 #The email of the current IT Supervisor.
 config['IT_SUPERVISOR_EMAIL'] = {'Kewyn Medina':'kewyn.medina@laureate.net'}
 

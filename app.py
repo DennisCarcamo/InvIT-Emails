@@ -121,16 +121,18 @@ def addEmailCount(results):
                         WHERE id_signature = {};""".format(currentEmailCount, idPage))
             executeInsertQuery2(query,connection)
 
-
-
 if __name__ == '__main__':
     config = ConfigParser()
-    config.read('configurations.ini')
+    config.read('C:\\Users\\dejoc\\Documents\\InvITemails\\Emails\\configurations.ini')
 
     admins = []
+    adminEmailFrec = ''
     name = ''
     email = ''
     supervisor = []
+    supervisorEmailFrec = ''
+    execution = ''
+
 
     try:
         for section_name in config.sections():
@@ -142,10 +144,13 @@ if __name__ == '__main__':
             elif (str(section_name) == 'IT_SUPERVISOR_EMAIL'):
                 for name, email  in config.items(section_name):
                     supervisor.append({'name':name, 'email':email})
+            elif (str(section_name) == 'EMAILS_FRECUENCY'):
+                supervisorEmailFrec = config['EMAILS_FRECUENCY']['it_supervisor']
+                adminEmailFrec = config['EMAILS_FRECUENCY']['it_admins']
+            elif(str(section_name) == 'EXECUTION'):
+                execution = config['EXECUTION']['execution']
     except:
         print('error')
-
-
 
     PSQL_HOST = config['dataBase']['data_base_host']
     PSQL_PORT = config['dataBase']['data_base_port']
@@ -172,7 +177,7 @@ if __name__ == '__main__':
         resultForEmails = prepareEmailInfo(connection)
 
         #send emails
-        results = Email.sendEmails(resultForEmails,admins,supervisor)
+        results = Email.sendEmails(resultForEmails,admins,supervisor, execution, adminEmailFrec, supervisorEmailFrec)
 
         #set the Email Count
         addEmailCount(results)

@@ -176,9 +176,10 @@ class Email():
             }
 
     @staticmethod
-    def sendEmails(resultForEmails, admins, supervisor):
+    def sendEmails(resultForEmails, admins, supervisor, execution, adminEmailFrec, supervisorEmailFrec):
         acumulatedSentEmails = ''
         result = ''
+        allEmails = []
         products = []
         tempIdPage = ''
         todayDate = Email.todayDate();
@@ -194,23 +195,55 @@ class Email():
                         else:
                             products.append({'Tag':item['id_product'],'Product Name':item['product_name'],'Serial Number':item['serial_number']})
                             result = Email.ss(item,products)
+                            allEmails.append(result)
                             acumulatedSentEmails += str(result['message'])
                             products = []
                     except:
                         products.append({'Tag':item['id_product'],'Product Name':item['product_name'],'Serial Number':item['serial_number']})
                         result = Email.ss(item,products)
+                        allEmails.append(result)
                         acumulatedSentEmails += str(result['message'])
                         products = []
 
+
         #send emails to IT admins
-        for i, item in enumerate(admins):
-            Email.sendAdminEmails(item, acumulatedSentEmails);
+        if(adminEmailFrec == 'every time'):
+            for i, item in enumerate(admins):
+                Email.sendAdminEmails(item, acumulatedSentEmails);
+        elif(adminEmailFrec == 'once a week'):
+            today = datetime.today().strftime('%A')
+            if(today == 'Monday'):
+                for i, item in enumerate(admins):
+                    Email.sendAdminEmails(item, acumulatedSentEmails);
+        elif(adminEmailFrec == 'only manually executions'):
+            if(execution == 'manual'):
+                for i, item in enumerate(admins):
+                    Email.sendAdminEmails(item, acumulatedSentEmails);
+        elif(adminEmailFrec == 'only automatically executions'):
+            if(execution == 'automatic'):
+                for i, item in enumerate(admins):
+                    Email.sendAdminEmails(item, acumulatedSentEmails);
 
         #send emails to IT Supervisor
-        #for i, item in enumerate(supervisor):
-            #Email.sendAdminEmails(item, acumulatedSentEmails);
+        #if(supervisorEmailFrec == 'every time'):
+        #    for i, item in enumerate(supervisor):
+        #        Email.sendAdminEmails(item, acumulatedSentEmails);
+        #elif(supervisorEmailFrec == 'once a week'):
+        #    today = datetime.today().strftime('%A')
+        #    if(today == 'Monday'):
+        #         for i, item in enumerate(supervisor):
+        #            Email.sendAdminEmails(item, acumulatedSentEmails);
+        #elif(supervisorEmailFrec == 'only manually executions'):
+        #    if(execution == 'manual'):
+        #        for i, item in enumerate(supervisor):
+        #            Email.sendAdminEmails(item, acumulatedSentEmails);
+        #elif(supervisorEmailFrec == 'only automatically executions'):
+        #    if(execution == 'automatic'):
+        #        for i, item in enumerate(supervisor):
+        #            Email.sendAdminEmails(item, acumulatedSentEmails);
       
-
+        return allEmails
+        
     @staticmethod
     def todayDate():
         today = datetime.now();
